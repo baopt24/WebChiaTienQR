@@ -10,11 +10,17 @@ import SharedCart from './components/SharedCart';
 import LockOrderModal from './components/LockOrderModal';
 import BillSummarySection from './components/BillSummarySection';
 import QRShareModal from './components/QRShareModal';
-import AddCustomDishModal from './components/AddCustomDishModal';
+import AdminPortal from './components/AdminPortal';
 
-import { Lock, Unlock, CheckCircle2 } from 'lucide-react';
+import { Lock, Unlock, CheckCircle2, ShieldCheck, ExternalLink } from 'lucide-react';
 
 export default function App() {
+  // Check if URL has ?view=admin or ?admin=true
+  const [isAdminView, setIsAdminView] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('view') === 'admin' || params.get('admin') === 'true' || window.location.pathname === '/admin';
+  });
+
   const [userName, setUserName] = useState(localStorage.getItem('vku_user_name') || '');
   const [room, setRoom] = useState(null);
   const [banks, setBanks] = useState([]);
@@ -23,7 +29,6 @@ export default function App() {
   // Modals state
   const [showQRModal, setShowQRModal] = useState(false);
   const [showLockModal, setShowLockModal] = useState(false);
-  const [showCustomDishModal, setShowCustomDishModal] = useState(false);
 
   const triggerToast = (msg) => {
     setNotification(msg);
@@ -43,6 +48,15 @@ export default function App() {
       setRoom(updatedRoom);
     });
 
+    socket.on('global_catalog_updated', (updatedCatalog) => {
+      // Live sync new restaurants/dishes added by admin to active room
+      setRoom(prev => {
+        if (!prev) return null;
+        return { ...prev, restaurants: updatedCatalog };
+      });
+      triggerToast('Thực đơn các quán vừa được Admin cập nhật thời gian thực!');
+    });
+
     socket.on('member_joined', ({ userName: joinedUser }) => {
       if (joinedUser.toLowerCase() !== (userName || '').trim().toLowerCase()) {
         triggerToast(`${joinedUser} vừa tham gia phòng!`);
@@ -59,11 +73,26 @@ export default function App() {
 
     return () => {
       socket.off('room_state');
+      socket.off('global_catalog_updated');
       socket.off('member_joined');
       socket.off('order_locked');
       socket.off('order_unlocked');
     };
   }, [userName]);
+
+  // -------------------------------------------------------------
+  // DEDICATED ADMIN PORTAL (Không cần đăng nhập vào phòng)
+  // -------------------------------------------------------------
+  if (isAdminView) {
+    return (
+      <AdminPortal
+        onBackToUserApp={() => {
+          setIsAdminView(false);
+          window.history.pushState({}, '', window.location.pathname);
+        }}
+      />
+    );
+  }
 
   // Actions
   const handleAddItem = (dish, customNote = '') => {
@@ -87,19 +116,6 @@ export default function App() {
       roomId: room.id,
       itemId
     });
-  };
-
-  const handleAddCustomDish = (dish) => {
-    if (!room || room.isLocked) return;
-    socket.emit('add_custom_dish', {
-      roomId: room.id,
-      dish
-    });
-
-    // Also directly add to cart for this user
-    handleAddItem(dish, dish.desc);
-    setShowCustomDishModal(false);
-    triggerToast(`Đã thêm món "${dish.name}" vào thực đơn!`);
   };
 
   const handleConfirmLock = ({ shippingFee, discountAmount }) => {
@@ -154,6 +170,18 @@ export default function App() {
           }}
           triggerToast={triggerToast}
         />
+
+        {/* Link to Dedicated Admin Portal */}
+        <div className="text-center pb-6">
+          <button
+            onClick={() => setIsAdminView(true)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-orange-600 transition bg-white/70 border border-slate-200 px-3.5 py-1.5 rounded-full shadow-2xs"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Trang Quản Trị Quán & Thực Đơn (Admin Portal)</span>
+            <ExternalLink className="w-3 h-3" />
+          </button>
+        </div>
       </>
     );
   }
@@ -203,12 +231,12 @@ export default function App() {
           onRemoveItem={handleRemoveItem}
         />
 
-        {/* Multi-Restaurant Menu Section (Phase 2) */}
+        {/* Multi-Restaurant Menu Section: Click to view each restaurant's dishes with images */}
         <MenuSection
           restaurants={room.restaurants || []}
+          cartItems={room.items || []}
           isLocked={room.isLocked}
           onAddItem={handleAddItem}
-          onOpenCustomModal={() => setShowCustomDishModal(true)}
         />
       </main>
 
@@ -267,14 +295,6 @@ export default function App() {
           totalSubtotal={totalSubtotal}
           onClose={() => setShowLockModal(false)}
           onConfirmLock={handleConfirmLock}
-        />
-      )}
-
-      {showCustomDishModal && (
-        <AddCustomDishModal
-          existingRestaurants={room.restaurants || []}
-          onClose={() => setShowCustomDishModal(false)}
-          onAddCustomDish={handleAddCustomDish}
         />
       )}
     </div>
