@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { socket, SERVER_URL } from './services/socket';
 import { formatVND } from './utils/formatters';
+import { playTingTingSound } from './utils/audio';
 
 // Modular Components
 import JoinCreateModal from './components/JoinCreateModal';
@@ -35,7 +36,7 @@ export default function App() {
     setTimeout(() => setNotification(''), 3500);
   };
 
-  // Initial Data Fetching
+  // Initial Data Fetching & Socket listeners
   useEffect(() => {
     // Banks
     fetch(`${SERVER_URL}/api/banks`)
@@ -49,7 +50,6 @@ export default function App() {
     });
 
     socket.on('global_catalog_updated', (updatedCatalog) => {
-      // Live sync new restaurants/dishes added by admin to active room
       setRoom(prev => {
         if (!prev) return null;
         return { ...prev, restaurants: updatedCatalog };
@@ -71,12 +71,30 @@ export default function App() {
       triggerToast('Chủ phòng đã mở khóa đơn!');
     });
 
+    // Payment Lifecycle Events (P2P Confirmation)
+    socket.on('payment_reported', ({ memberName, amount }) => {
+      playTingTingSound();
+      triggerToast(`🔔 ${memberName} vừa báo đã chuyển ${formatVND(amount)}!`);
+    });
+
+    socket.on('payment_confirmed', ({ memberName, amount }) => {
+      playTingTingSound();
+      triggerToast(`🎉 Xác nhận: ${memberName} đã thanh toán thành công ${formatVND(amount)}!`);
+    });
+
+    socket.on('payment_rejected', ({ memberName, reason }) => {
+      triggerToast(`⚠️ Báo chưa nhận được tiền từ ${memberName}: ${reason}`);
+    });
+
     return () => {
       socket.off('room_state');
       socket.off('global_catalog_updated');
       socket.off('member_joined');
       socket.off('order_locked');
       socket.off('order_unlocked');
+      socket.off('payment_reported');
+      socket.off('payment_confirmed');
+      socket.off('payment_rejected');
     };
   }, [userName]);
 
@@ -208,7 +226,7 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="p-4 space-y-4">
-        {/* Bill Summary & Dynamic VietQR (Phases 4 & 5) */}
+        {/* Bill Summary, P2P Confirmation & Dynamic VietQR */}
         {room.isLocked && room.billSummary && (
           <BillSummarySection
             billSummary={room.billSummary}

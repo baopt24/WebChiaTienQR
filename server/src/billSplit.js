@@ -30,7 +30,10 @@ export function calculateFairSplitBill({
         shippingShare: 0,
         discountShare: 0,
         finalAmount: 0,
-        vietQRUrl: ''
+        vietQRUrl: '',
+        paymentStatus: 'UNPAID', // 'UNPAID' | 'PENDING' | 'PAID'
+        paidAt: null,
+        proofNote: ''
       };
     }
     userMap[memberName].items.push(item);
@@ -76,6 +79,7 @@ export function calculateFairSplitBill({
     m.shippingShare = equalShip;
     m.discountShare = discountI;
     m.finalAmount = finalAmountI;
+    m.paymentStatus = 'UNPAID';
 
     // Phase 5: Dynamic VietQR Generation
     m.vietQRUrl = generateVietQRUrl({

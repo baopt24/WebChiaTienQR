@@ -62,7 +62,7 @@ export function registerSocketHandlers(io) {
         rooms.set(roomId, newRoom);
         socket.join(roomId);
 
-        console.log(`[Room Created] ${roomId} by Host: ${cleanHost} with ${newRoom.restaurants.length} restaurants`);
+        console.log(`[Room Created] ${roomId} by Host: ${cleanHost}`);
 
         if (typeof callback === 'function') {
           callback({ success: true, room: newRoom });
@@ -95,10 +95,8 @@ export function registerSocketHandlers(io) {
           return;
         }
 
-        // Attach socket to room
         socket.join(room.id);
 
-        // Check if member already in room (reconnect or update socket id)
         const existingMember = room.members.find(
           m => m.name.toLowerCase() === cleanName.toLowerCase() || m.id === socket.id
         );
@@ -116,7 +114,6 @@ export function registerSocketHandlers(io) {
 
         console.log(`[Member Joined] ${cleanName} joined ${room.id} (Total: ${room.members.length})`);
 
-        // Broadcast updated room state to all clients in this room
         io.to(room.id).emit('room_state', room);
         io.to(room.id).emit('member_joined', { userName: cleanName, members: room.members });
 
@@ -132,7 +129,7 @@ export function registerSocketHandlers(io) {
     });
 
     /**
-     * Phase 2: Add item to shared cart (with restaurant tagging)
+     * Phase 2: Add item to shared cart
      * Event: add_item
      */
     socket.on('add_item', ({ roomId, item }) => {
@@ -154,7 +151,6 @@ export function registerSocketHandlers(io) {
 
       console.log(`[Cart Added] ${newItem.dishName} (${newItem.restaurantName}) by ${newItem.userName} in ${roomId}`);
 
-      // Broadcast cart_updated & room_state to all connected clients
       io.to(roomId).emit('cart_updated', { items: room.items });
       io.to(roomId).emit('room_state', room);
     });
@@ -188,7 +184,6 @@ export function registerSocketHandlers(io) {
 
       const targetRestName = (dish.restaurantName || '').trim() || 'Quán khác / Tự do';
       
-      // Find or create restaurant
       let targetRest = room.restaurants.find(
         r => r.name.toLowerCase() === targetRestName.toLowerCase()
       );
@@ -198,6 +193,7 @@ export function registerSocketHandlers(io) {
           id: `custom-rest-${Date.now()}`,
           name: targetRestName,
           category: 'Quán tự thêm',
+          image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80',
           items: []
         };
         room.restaurants.push(targetRest);
@@ -209,6 +205,7 @@ export function registerSocketHandlers(io) {
         price: Math.max(0, Number(dish.price) || 0),
         category: dish.category || 'Món thêm',
         desc: dish.desc || 'Món do thành viên thêm',
+        image: dish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&q=80',
         restaurantName: targetRest.name
       };
 
@@ -224,7 +221,6 @@ export function registerSocketHandlers(io) {
       const room = rooms.get(roomId);
       if (!room) return;
 
-      // Verify host authority
       const isHost = socket.id === room.hostSocketId || 
         room.members.find(m => m.id === socket.id)?.isHost;
 
@@ -243,7 +239,6 @@ export function registerSocketHandlers(io) {
         room.hostAccount = { ...room.hostAccount, ...hostAccount };
       }
 
-      // Execute Phase 4 & Phase 5 calculation
       const calculatedBill = calculateFairSplitBill({
         roomId: room.id,
         items: room.items,
@@ -257,7 +252,6 @@ export function registerSocketHandlers(io) {
 
       console.log(`[Order Locked] ${roomId} - Total Final: ${calculatedBill.grandTotal}đ`);
 
-      // Broadcast order_locked and room_state
       io.to(roomId).emit('order_locked', { billSummary: calculatedBill });
       io.to(roomId).emit('room_state', room);
     });
@@ -275,6 +269,98 @@ export function registerSocketHandlers(io) {
 
       console.log(`[Order Unlocked] ${roomId}`);
       io.to(roomId).emit('order_unlocked');
+      io.to(roomId).emit('room_state', room);
+    });
+
+    // ===============================================================
+    // PAYMENT CONFIRMATION LIFECYCLE (P2P PEER CONFIRMATION)
+    // ===============================================================
+
+    /**
+     * Step 1: Member reports that they paid via VietQR
+     * Event: report_paid
+     */
+    socket.on('report_paid', ({ roomId, memberName, proofNote }) => {
+      const room = rooms.get(roomId);
+      if (!room || !room.billSummary) return;
+
+      const targetMemberBill = room.billSummary.memberBills?.find(
+        m => m.userName.toLowerCase() === (memberName || '').trim().toLowerCase()
+      );
+
+      if (!targetMemberBill) return;
+
+      targetMemberBill.paymentStatus = 'PENDING';
+      targetMemberBill.proofNote = (proofNote || '').trim();
+      targetMemberBill.reportedAt = new Date();
+
+      console.log(`[Payment Reported] ${memberName} reported paid ${targetMemberBill.finalAmount}đ in ${roomId}`);
+
+      io.to(roomId).emit('payment_reported', { 
+        memberName: targetMemberBill.userName, 
+        amount: targetMemberBill.finalAmount 
+      });
+      io.to(roomId).emit('room_state', room);
+    });
+
+    /**
+     * Step 2: Host confirms that payment was received (or cancel pending)
+     * Event: confirm_payment
+     */
+    socket.on('confirm_payment', ({ roomId, memberName }) => {
+      const room = rooms.get(roomId);
+      if (!room || !room.billSummary) return;
+
+      // Only host or authorized socket can confirm
+      const isHost = socket.id === room.hostSocketId || 
+        room.members.find(m => m.id === socket.id)?.isHost;
+
+      if (!isHost) {
+        console.warn(`[Unauthorized] Non-host attempted to confirm payment in ${roomId}`);
+        return;
+      }
+
+      const targetMemberBill = room.billSummary.memberBills?.find(
+        m => m.userName.toLowerCase() === (memberName || '').trim().toLowerCase()
+      );
+
+      if (!targetMemberBill) return;
+
+      targetMemberBill.paymentStatus = 'PAID';
+      targetMemberBill.paidAt = new Date();
+
+      console.log(`[Payment Confirmed] Host verified payment of ${memberName} (${targetMemberBill.finalAmount}đ) in ${roomId}`);
+
+      io.to(roomId).emit('payment_confirmed', { 
+        memberName: targetMemberBill.userName, 
+        amount: targetMemberBill.finalAmount 
+      });
+      io.to(roomId).emit('room_state', room);
+    });
+
+    /**
+     * Step 3: Host marks as unpaid if money not received
+     * Event: reject_payment
+     */
+    socket.on('reject_payment', ({ roomId, memberName, reason }) => {
+      const room = rooms.get(roomId);
+      if (!room || !room.billSummary) return;
+
+      const targetMemberBill = room.billSummary.memberBills?.find(
+        m => m.userName.toLowerCase() === (memberName || '').trim().toLowerCase()
+      );
+
+      if (!targetMemberBill) return;
+
+      targetMemberBill.paymentStatus = 'UNPAID';
+      targetMemberBill.proofNote = '';
+
+      console.log(`[Payment Rejected] Host marked ${memberName} as UNPAID in ${roomId}`);
+
+      io.to(roomId).emit('payment_rejected', { 
+        memberName: targetMemberBill.userName, 
+        reason: reason || 'Chưa nhận được tiền vào tài khoản' 
+      });
       io.to(roomId).emit('room_state', room);
     });
 
