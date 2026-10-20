@@ -30,7 +30,7 @@ export default function RoomHeader({ room, onOpenQR, onLeaveRoom }) {
           </span>
         </div>
         <h2 className="text-sm font-bold text-slate-800 line-clamp-1 mt-0.5">
-          {room.restaurantName}
+          {room.title || `Phòng gom đơn của ${room.hostName}`}
         </h2>
       </div>
 

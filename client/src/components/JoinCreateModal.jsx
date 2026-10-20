@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Utensils, ArrowRight, CreditCard, Sparkles, Building2 } from 'lucide-react';
 import { socket } from '../services/socket';
 
-export default function JoinCreateModal({ presets = [], banks = [], onRoomJoined, triggerToast }) {
+export default function JoinCreateModal({ banks = [], onRoomJoined, triggerToast }) {
   const [viewMode, setViewMode] = useState('join'); // 'join' | 'create'
   const [userName, setUserName] = useState(localStorage.getItem('vku_user_name') || '');
   const [roomIdInput, setRoomIdInput] = useState('');
   
   // Host config
-  const [selectedPreset, setSelectedPreset] = useState('');
-  const [customRestaurantName, setCustomRestaurantName] = useState('');
+  const [roomTitle, setRoomTitle] = useState('');
   const [bankCode, setBankCode] = useState('MB');
   const [accountNo, setAccountNo] = useState('');
   const [accountName, setAccountName] = useState('');
@@ -23,12 +22,6 @@ export default function JoinCreateModal({ presets = [], banks = [], onRoomJoined
       setViewMode('join');
     }
   }, []);
-
-  useEffect(() => {
-    if (presets.length > 0 && !selectedPreset) {
-      setSelectedPreset(presets[0].id);
-    }
-  }, [presets]);
 
   const handleJoinRoom = (e) => {
     e.preventDefault();
@@ -57,23 +50,9 @@ export default function JoinCreateModal({ presets = [], banks = [], onRoomJoined
 
     localStorage.setItem('vku_user_name', cleanName);
 
-    let restaurantName = '';
-    let menu = [];
-
-    if (selectedPreset === 'custom') {
-      restaurantName = customRestaurantName.trim() || 'Quán ăn tự chọn';
-    } else {
-      const preset = presets.find(p => p.id === selectedPreset);
-      if (preset) {
-        restaurantName = preset.name;
-        menu = preset.items;
-      }
-    }
-
     socket.emit('create_room', {
       hostName: cleanName,
-      restaurantName,
-      menu,
+      roomTitle: roomTitle.trim() || `Phiên gom đơn của ${cleanName}`,
       hostAccount: {
         bankId: bankCode,
         accountNo: accountNo.trim() || '0987654321',
@@ -138,7 +117,7 @@ export default function JoinCreateModal({ presets = [], banks = [], onRoomJoined
                 placeholder="Ví dụ: Thái Bảo, Hoàng Nam..."
                 value={userName}
                 onChange={e => setUserName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm"
               />
             </div>
 
@@ -168,7 +147,7 @@ export default function JoinCreateModal({ presets = [], banks = [], onRoomJoined
           <form onSubmit={handleCreateRoom} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
-                Tên chủ phòng (Host)
+                Tên chủ phòng (Bạn)
               </label>
               <input
                 type="text"
@@ -182,35 +161,19 @@ export default function JoinCreateModal({ presets = [], banks = [], onRoomJoined
 
             <div>
               <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
-                Chọn Thực đơn Quán ăn / Trà sữa
+                Tiêu đề phòng gom (Tùy chọn)
               </label>
-              <select
-                value={selectedPreset}
-                onChange={e => setSelectedPreset(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm bg-white"
-              >
-                {presets.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.category})</option>
-                ))}
-                <option value="custom">✍️ Quán khác (Tự nhập món)</option>
-              </select>
+              <input
+                type="text"
+                placeholder="Ví dụ: Trà sữa trưa nay, Ăn trưa KTX..."
+                value={roomTitle}
+                onChange={e => setRoomTitle(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">
+                💡 Trong phòng sẽ có sẵn thực đơn của <strong>nhiều quán ăn & trà sữa</strong> để cả nhóm thoải mái chọn món!
+              </p>
             </div>
-
-            {selectedPreset === 'custom' && (
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
-                  Tên quán muốn ăn
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Bún chả Hà Nội, Bánh mì Cô Ba..."
-                  value={customRestaurantName}
-                  onChange={e => setCustomRestaurantName(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm"
-                />
-              </div>
-            )}
 
             {/* Banking Config for VietQR */}
             <div className="bg-orange-50/70 p-3.5 rounded-2xl border border-orange-100 space-y-2">
@@ -250,7 +213,7 @@ export default function JoinCreateModal({ presets = [], banks = [], onRoomJoined
               type="submit"
               className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/25 hover:opacity-95 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
             >
-              <span>Khởi tạo phòng gom & Nhận mã</span>
+              <span>Khởi tạo phòng & Mở thực đơn</span>
               <Sparkles className="w-4 h-4" />
             </button>
           </form>

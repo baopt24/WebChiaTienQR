@@ -1,4 +1,5 @@
 import { calculateFairSplitBill } from './billSplit.js';
+import { PRESET_RESTAURANTS } from './data/presets.js';
 
 // In-Memory Room Store
 export const rooms = new Map();
@@ -15,6 +16,11 @@ export function generateUniqueRoomId() {
   return id;
 }
 
+// Deep clone presets so each room has its own isolated menu state
+function getClonedPresets() {
+  return JSON.parse(JSON.stringify(PRESET_RESTAURANTS));
+}
+
 export function registerSocketHandlers(io) {
   io.on('connection', (socket) => {
     console.log(`[Socket Connected] Socket ID: ${socket.id}`);
@@ -23,17 +29,18 @@ export function registerSocketHandlers(io) {
      * Phase 1: Room Creation (Host Role)
      * Event: create_room
      */
-    socket.on('create_room', ({ hostName, restaurantName, menu, hostAccount }, callback) => {
+    socket.on('create_room', ({ hostName, roomTitle, hostAccount }, callback) => {
       try {
         const cleanHost = (hostName || '').trim() || 'Chủ phòng';
         const roomId = generateUniqueRoomId();
 
         const newRoom = {
           id: roomId,
+          title: (roomTitle || '').trim() || `Phiên gom đơn của ${cleanHost}`,
           hostName: cleanHost,
           hostSocketId: socket.id,
-          restaurantName: restaurantName || 'Quán ăn tự chọn',
-          menu: Array.isArray(menu) ? menu : [],
+          // Inside the room, all restaurants are available for selection!
+          restaurants: getClonedPresets(),
           members: [
             { id: socket.id, name: cleanHost, isHost: true, joinedAt: new Date() }
           ],
@@ -55,7 +62,7 @@ export function registerSocketHandlers(io) {
         rooms.set(roomId, newRoom);
         socket.join(roomId);
 
-        console.log(`[Room Created] ${roomId} by Host: ${cleanHost}`);
+        console.log(`[Room Created] ${roomId} by Host: ${cleanHost} with ${newRoom.restaurants.length} restaurants`);
 
         if (typeof callback === 'function') {
           callback({ success: true, room: newRoom });
@@ -125,7 +132,7 @@ export function registerSocketHandlers(io) {
     });
 
     /**
-     * Phase 2: Add item to shared cart
+     * Phase 2: Add item to shared cart (with restaurant tagging)
      * Event: add_item
      */
     socket.on('add_item', ({ roomId, item }) => {
@@ -137,6 +144,7 @@ export function registerSocketHandlers(io) {
         dishName: item.dishName,
         price: Math.max(0, Number(item.price) || 0),
         note: (item.note || '').trim(),
+        restaurantName: item.restaurantName || 'Quán tự chọn',
         userName: item.userName || 'Thành viên',
         userSocketId: socket.id,
         createdAt: new Date()
@@ -144,7 +152,7 @@ export function registerSocketHandlers(io) {
 
       room.items.push(newItem);
 
-      console.log(`[Cart Added] ${newItem.dishName} by ${newItem.userName} in ${roomId}`);
+      console.log(`[Cart Added] ${newItem.dishName} (${newItem.restaurantName}) by ${newItem.userName} in ${roomId}`);
 
       // Broadcast cart_updated & room_state to all connected clients
       io.to(roomId).emit('cart_updated', { items: room.items });
@@ -171,22 +179,40 @@ export function registerSocketHandlers(io) {
     });
 
     /**
-     * Phase 2: Add custom dish to menu
+     * Phase 2: Add custom dish or new restaurant inside room
      * Event: add_custom_dish
      */
     socket.on('add_custom_dish', ({ roomId, dish }) => {
       const room = rooms.get(roomId);
       if (!room || room.isLocked) return;
 
+      const targetRestName = (dish.restaurantName || '').trim() || 'Quán khác / Tự do';
+      
+      // Find or create restaurant
+      let targetRest = room.restaurants.find(
+        r => r.name.toLowerCase() === targetRestName.toLowerCase()
+      );
+
+      if (!targetRest) {
+        targetRest = {
+          id: `custom-rest-${Date.now()}`,
+          name: targetRestName,
+          category: 'Quán tự thêm',
+          items: []
+        };
+        room.restaurants.push(targetRest);
+      }
+
       const newDish = {
         id: `custom-${Date.now()}`,
         name: dish.name,
         price: Math.max(0, Number(dish.price) || 0),
-        category: dish.category || 'Món tự thêm',
-        desc: dish.desc || 'Món được thành viên thêm thủ công'
+        category: dish.category || 'Món thêm',
+        desc: dish.desc || 'Món do thành viên thêm',
+        restaurantName: targetRest.name
       };
 
-      room.menu.push(newDish);
+      targetRest.items.push(newDish);
       io.to(roomId).emit('room_state', room);
     });
 

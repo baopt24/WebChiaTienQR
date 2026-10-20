@@ -17,7 +17,6 @@ import { Lock, Unlock, CheckCircle2 } from 'lucide-react';
 export default function App() {
   const [userName, setUserName] = useState(localStorage.getItem('vku_user_name') || '');
   const [room, setRoom] = useState(null);
-  const [presets, setPresets] = useState([]);
   const [banks, setBanks] = useState([]);
   const [notification, setNotification] = useState('');
 
@@ -33,12 +32,6 @@ export default function App() {
 
   // Initial Data Fetching
   useEffect(() => {
-    // Presets
-    fetch(`${SERVER_URL}/api/presets`)
-      .then(res => res.json())
-      .then(data => setPresets(data))
-      .catch(err => console.error('Error loading presets:', err));
-
     // Banks
     fetch(`${SERVER_URL}/api/banks`)
       .then(res => res.json())
@@ -81,10 +74,11 @@ export default function App() {
         dishName: dish.name,
         price: dish.price,
         note: customNote,
+        restaurantName: dish.restaurantName || 'Quán tự chọn',
         userName
       }
     });
-    triggerToast(`Đã thêm: ${dish.name}`);
+    triggerToast(`Đã thêm: ${dish.name} (${dish.restaurantName || ''})`);
   };
 
   const handleRemoveItem = (itemId) => {
@@ -105,6 +99,7 @@ export default function App() {
     // Also directly add to cart for this user
     handleAddItem(dish, dish.desc);
     setShowCustomDishModal(false);
+    triggerToast(`Đã thêm món "${dish.name}" vào thực đơn!`);
   };
 
   const handleConfirmLock = ({ shippingFee, discountAmount }) => {
@@ -152,7 +147,6 @@ export default function App() {
         )}
 
         <JoinCreateModal
-          presets={presets}
           banks={banks}
           onRoomJoined={(joinedRoom, name) => {
             setRoom(joinedRoom);
@@ -200,7 +194,7 @@ export default function App() {
           />
         )}
 
-        {/* Real-time Shared Cart (Phase 2) */}
+        {/* Real-time Shared Cart (Phase 2 - Supports viewing by Member or by Restaurant) */}
         <SharedCart
           items={room.items}
           currentUserName={userName}
@@ -209,9 +203,9 @@ export default function App() {
           onRemoveItem={handleRemoveItem}
         />
 
-        {/* Menu Section (Phase 2) */}
+        {/* Multi-Restaurant Menu Section (Phase 2) */}
         <MenuSection
-          menu={room.menu}
+          restaurants={room.restaurants || []}
           isLocked={room.isLocked}
           onAddItem={handleAddItem}
           onOpenCustomModal={() => setShowCustomDishModal(true)}
@@ -278,6 +272,7 @@ export default function App() {
 
       {showCustomDishModal && (
         <AddCustomDishModal
+          existingRestaurants={room.restaurants || []}
           onClose={() => setShowCustomDishModal(false)}
           onAddCustomDish={handleAddCustomDish}
         />
