@@ -174,7 +174,7 @@ export default function App() {
     return (
       <>
         {notification && (
-          <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg text-xs z-50 flex items-center gap-2 animate-fade-in">
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg text-xs z-50 flex items-center gap-2 animate-fade-in-down">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <span>{notification}</span>
           </div>
@@ -190,10 +190,10 @@ export default function App() {
         />
 
         {/* Link to Dedicated Admin Portal */}
-        <div className="text-center pb-6">
+        <div className="text-center pb-8">
           <button
             onClick={() => setIsAdminView(true)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-orange-600 transition bg-white/70 border border-slate-200 px-3.5 py-1.5 rounded-full shadow-2xs"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-orange-600 transition bg-white/70 border border-slate-200 px-3.5 py-1.5 rounded-full shadow-sm"
           >
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Trang Quản Trị Quán & Thực Đơn (Admin Portal)</span>
@@ -208,10 +208,10 @@ export default function App() {
   // VIEW: ACTIVE ROOM
   // -------------------------------------------------------------
   return (
-    <div className="max-w-lg mx-auto pb-28 min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-b from-orange-50/40 to-slate-50">
       {/* Toast Alert */}
       {notification && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg text-xs z-50 flex items-center gap-2 animate-fade-in">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-xl text-xs z-50 flex items-center gap-2 animate-fade-in-down">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <span>{notification}</span>
         </div>
@@ -220,83 +220,99 @@ export default function App() {
       {/* Room Header */}
       <RoomHeader
         room={room}
+        userName={userName}
         onOpenQR={() => setShowQRModal(true)}
         onLeaveRoom={handleLeaveRoom}
       />
 
-      {/* Main Content Area */}
-      <main className="p-4 space-y-4">
-        {/* Bill Summary, P2P Confirmation & Dynamic VietQR */}
-        {room.isLocked && room.billSummary && (
-          <BillSummarySection
-            billSummary={room.billSummary}
-            currentUserName={userName}
-            hostName={room.hostName}
-            hostAccount={room.hostAccount}
-            roomId={room.id}
-            isHost={isHost}
-            onUnlockRoom={handleUnlockRoom}
-            triggerToast={triggerToast}
-          />
-        )}
+      {/* Main Content Area — 2-col on desktop */}
+      <div className="max-w-7xl mx-auto px-4 pb-28 md:pb-10 pt-3 md:pt-5">
+        <div className="md:grid md:grid-cols-[1fr,440px] md:gap-6 lg:grid-cols-[1fr,480px]">
 
-        {/* Real-time Shared Cart (Phase 2 - Supports viewing by Member or by Restaurant) */}
-        <SharedCart
-          items={room.items}
-          currentUserName={userName}
-          isHost={isHost}
-          isLocked={room.isLocked}
-          onRemoveItem={handleRemoveItem}
-        />
+          {/* ── LEFT COLUMN: Menu ── */}
+          <div className="order-2 md:order-1 animate-slide-up">
+            {/* Multi-Restaurant Menu Section */}
+            <MenuSection
+              restaurants={room.restaurants || []}
+              cartItems={room.items || []}
+              isLocked={room.isLocked}
+              onAddItem={handleAddItem}
+            />
+          </div>
 
-        {/* Multi-Restaurant Menu Section: Click to view each restaurant's dishes with images */}
-        <MenuSection
-          restaurants={room.restaurants || []}
-          cartItems={room.items || []}
-          isLocked={room.isLocked}
-          onAddItem={handleAddItem}
-        />
-      </main>
+          {/* ── RIGHT COLUMN: Cart + Bill Summary ── */}
+          <div className="order-1 md:order-2 space-y-4 mb-4 md:mb-0 animate-fade-in-down">
+            {/* Bill Summary (only when locked) */}
+            {room.isLocked && room.billSummary && (
+              <BillSummarySection
+                billSummary={room.billSummary}
+                currentUserName={userName}
+                hostName={room.hostName}
+                hostAccount={room.hostAccount}
+                roomId={room.id}
+                isHost={isHost}
+                onUnlockRoom={handleUnlockRoom}
+                triggerToast={triggerToast}
+              />
+            )}
+
+            {/* Real-time Shared Cart */}
+            <SharedCart
+              items={room.items}
+              currentUserName={userName}
+              isHost={isHost}
+              isLocked={room.isLocked}
+              onRemoveItem={handleRemoveItem}
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Sticky Bottom Action Bar */}
-      <footer className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white/95 backdrop-blur border-t border-slate-200 p-3 px-4 z-30 flex items-center justify-between shadow-lg">
-        <div>
-          <span className="text-[11px] text-slate-400 block font-medium">
-            Tổng giỏ ({totalItemsCount} món)
-          </span>
-          <span className="text-lg font-black text-orange-600">
-            {formatVND(totalSubtotal)}
-          </span>
-        </div>
+      <footer className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-30 shadow-xl">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div>
+            <span className="text-[11px] text-slate-400 block font-medium">
+              Tổng giỏ ({totalItemsCount} món)
+            </span>
+            <span className="text-xl font-black text-orange-600">
+              {formatVND(totalSubtotal)}
+            </span>
+          </div>
 
-        {isHost ? (
-          !room.isLocked ? (
-            <button
-              onClick={() => setShowLockModal(true)}
-              disabled={totalItemsCount === 0}
-              className={`px-5 py-3 rounded-2xl font-bold text-xs text-white shadow-lg transition flex items-center gap-2 ${
-                totalItemsCount > 0 
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 shadow-orange-500/30 hover:opacity-95' 
-                  : 'bg-slate-300 cursor-not-allowed shadow-none'
-              }`}
-            >
-              <Lock className="w-4 h-4" />
-              <span>Chốt đơn & Chia tiền</span>
-            </button>
+          {isHost ? (
+            !room.isLocked ? (
+              <button
+                onClick={() => setShowLockModal(true)}
+                disabled={totalItemsCount === 0}
+                className={`px-6 py-3 rounded-2xl font-bold text-sm text-white shadow-lg transition-all flex items-center gap-2 ${
+                  totalItemsCount > 0 
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 shadow-orange-500/30 hover:opacity-95 active:scale-[0.98]' 
+                    : 'bg-slate-300 cursor-not-allowed shadow-none'
+                }`}
+              >
+                <Lock className="w-4 h-4" />
+                <span>Chốt đơn & Chia tiền</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleUnlockRoom}
+                className="px-6 py-3 rounded-2xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all flex items-center gap-2 active:scale-[0.98]"
+              >
+                <Unlock className="w-4 h-4" />
+                <span>Mở lại phòng</span>
+              </button>
+            )
           ) : (
-            <button
-              onClick={handleUnlockRoom}
-              className="px-5 py-3 rounded-2xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-2"
-            >
-              <Unlock className="w-4 h-4" />
-              <span>Mở lại phòng</span>
-            </button>
-          )
-        ) : (
-          <span className="text-xs text-slate-500 font-semibold bg-slate-100 px-3 py-2 rounded-xl">
-            {room.isLocked ? 'Đã khóa đơn (Xem VietQR phía trên)' : 'Đang đợi chủ phòng chốt'}
-          </span>
-        )}
+            <span className={`text-xs font-semibold px-4 py-2.5 rounded-2xl ${
+              room.isLocked 
+                ? 'text-amber-700 bg-amber-50 border border-amber-200' 
+                : 'text-slate-500 bg-slate-100'
+            }`}>
+              {room.isLocked ? '🔒 Đã khóa đơn (Xem VietQR phía trên)' : '⏳ Đang đợi chủ phòng chốt'}
+            </span>
+          )}
+        </div>
       </footer>
 
       {/* Modals */}
