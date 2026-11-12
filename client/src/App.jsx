@@ -12,6 +12,8 @@ import LockOrderModal from './components/LockOrderModal';
 import BillSummarySection from './components/BillSummarySection';
 import QRShareModal from './components/QRShareModal';
 import AdminPortal from './components/AdminPortal';
+import LuckyWheelModal from './components/LuckyWheelModal';
+import FloatingReactions from './components/FloatingReactions';
 
 import { Lock, Unlock, CheckCircle2, ShieldCheck, ExternalLink } from 'lucide-react';
 
@@ -30,6 +32,8 @@ export default function App() {
   // Modals state
   const [showQRModal, setShowQRModal] = useState(false);
   const [showLockModal, setShowLockModal] = useState(false);
+  const [showWheelModal, setShowWheelModal] = useState(false);
+  const [wheelSpinData, setWheelSpinData] = useState(null);
 
   const triggerToast = (msg) => {
     setNotification(msg);
@@ -86,6 +90,11 @@ export default function App() {
       triggerToast(`⚠️ Báo chưa nhận được tiền từ ${memberName}: ${reason}`);
     });
 
+    socket.on('wheel_spun', (data) => {
+      setWheelSpinData(data);
+      setShowWheelModal(true);
+    });
+
     return () => {
       socket.off('room_state');
       socket.off('global_catalog_updated');
@@ -95,6 +104,7 @@ export default function App() {
       socket.off('payment_reported');
       socket.off('payment_confirmed');
       socket.off('payment_rejected');
+      socket.off('wheel_spun');
     };
   }, [userName]);
 
@@ -222,6 +232,7 @@ export default function App() {
         room={room}
         userName={userName}
         onOpenQR={() => setShowQRModal(true)}
+        onOpenWheel={() => setShowWheelModal(true)}
         onLeaveRoom={handleLeaveRoom}
       />
 
@@ -242,6 +253,12 @@ export default function App() {
 
           {/* ── RIGHT COLUMN: Cart + Bill Summary ── */}
           <div className="order-1 md:order-2 space-y-4 mb-4 md:mb-0 animate-fade-in-down">
+            {/* Live Floating Emoji Reactions Bar */}
+            <FloatingReactions
+              roomId={room.id}
+              currentUserName={userName}
+            />
+
             {/* Bill Summary (only when locked) */}
             {room.isLocked && room.billSummary && (
               <BillSummarySection
@@ -329,6 +346,16 @@ export default function App() {
           totalSubtotal={totalSubtotal}
           onClose={() => setShowLockModal(false)}
           onConfirmLock={handleConfirmLock}
+        />
+      )}
+
+      {showWheelModal && (
+        <LuckyWheelModal
+          room={room}
+          currentUserName={userName}
+          externalSpinData={wheelSpinData}
+          onClose={() => setShowWheelModal(false)}
+          triggerToast={triggerToast}
         />
       )}
     </div>

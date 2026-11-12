@@ -1,7 +1,7 @@
 import React from 'react';
-import { QrCode, Users, LogOut, CheckCircle, Clock, Utensils } from 'lucide-react';
+import { QrCode, Users, LogOut, CheckCircle, Clock, Utensils, Sparkles } from 'lucide-react';
 
-export default function RoomHeader({ room, userName, onOpenQR, onLeaveRoom }) {
+export default function RoomHeader({ room, userName, onOpenQR, onOpenWheel, onLeaveRoom }) {
   if (!room) return null;
 
   return (
@@ -61,6 +61,18 @@ export default function RoomHeader({ room, userName, onOpenQR, onLeaveRoom }) {
               </span>
               <span>{userName}</span>
             </div>
+          )}
+
+          {/* Lucky Wheel Button */}
+          {onOpenWheel && (
+            <button
+              onClick={onOpenWheel}
+              className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-100 to-orange-100 text-orange-700 hover:from-orange-500 hover:to-amber-500 hover:text-white font-bold text-xs transition-all flex items-center gap-1 shadow-2xs border border-orange-200/70"
+              title="Vòng quay may mắn: Ai đi lấy đồ?"
+            >
+              <span>🎡</span>
+              <span className="hidden sm:inline">Vòng quay</span>
+            </button>
           )}
 
           <button

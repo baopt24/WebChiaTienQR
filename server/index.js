@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import os from 'os';
 import { registerSocketHandlers } from './src/socket.js';
 import { 
   PRESET_RESTAURANTS, 
@@ -33,6 +34,32 @@ const io = new Server(httpServer, {
 app.use(cors({ origin: ALLOWED_ORIGIN }));
 app.use(express.json());
 
+// Helper: Automatically detect Wi-Fi / LAN IPv4 address for mobile QR scanning
+function getLocalLanIp() {
+  const interfaces = os.networkInterfaces();
+  let fallbackIp = null;
+
+  for (const [name, netList] of Object.entries(interfaces)) {
+    if (!netList) continue;
+    for (const net of netList) {
+      if (net.family === 'IPv4' && !net.internal) {
+        // Ignore VirtualBox / VMware / APIPA addresses
+        if (net.address.startsWith('169.254.') || net.address.startsWith('192.168.56.')) {
+          continue;
+        }
+        // Prioritize Wi-Fi / Wireless interfaces
+        if (/wi-fi|wireless|wlan/i.test(name)) {
+          return net.address;
+        }
+        if (!fallbackIp) {
+          fallbackIp = net.address;
+        }
+      }
+    }
+  }
+  return fallbackIp || 'localhost';
+}
+
 // ------------------------------------------------------------------
 // REST Endpoints (Public)
 // ------------------------------------------------------------------
@@ -40,8 +67,17 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
     service: 'WebChiaTienQR - Realtime Group Order & Split Bill',
+    lanIp: getLocalLanIp(),
     uptime: process.uptime(),
     timestamp: new Date()
+  });
+});
+
+app.get('/api/network-info', (req, res) => {
+  res.json({
+    lanIp: getLocalLanIp(),
+    serverPort: process.env.PORT || 4000,
+    clientPort: 3000
   });
 });
 
@@ -123,9 +159,11 @@ registerSocketHandlers(io);
 const PORT = process.env.PORT || 4000;
 
 httpServer.listen(PORT, '0.0.0.0', () => {
+  const lanIp = getLocalLanIp();
   console.log(`=======================================================`);
   console.log(`🚀 WEBCHIATIENQR SERVER RUNNING ON PORT ${PORT}`);
   console.log(`📡 WebSocket Engine ready on ws://0.0.0.0:${PORT}`);
+  console.log(`📱 Mobile LAN Access: http://${lanIp}:3000`);
   console.log(`🛠️ Admin REST APIs active on http://localhost:${PORT}/api/admin/restaurants`);
   console.log(`=======================================================`);
 });

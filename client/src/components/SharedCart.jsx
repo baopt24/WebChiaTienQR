@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Trash2, Store, Users } from 'lucide-react';
+import { ShoppingBag, Trash2, Store, Users, ClipboardCopy, Check } from 'lucide-react';
 import { formatVND } from '../utils/formatters';
 
 // Generate a consistent color for each user avatar
@@ -20,6 +20,7 @@ function getAvatarColor(name) {
 
 export default function SharedCart({ items = [], currentUserName, isHost, isLocked, onRemoveItem }) {
   const [groupBy, setGroupBy] = useState('member'); // 'member' | 'restaurant'
+  const [copiedOrder, setCopiedOrder] = useState(false);
 
   const totalCount = items.length;
   const totalSubtotal = items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
@@ -39,6 +40,37 @@ export default function SharedCart({ items = [], currentUserName, isHost, isLock
     acc[rest].push(item);
     return acc;
   }, {});
+
+  // 3. One-click copy formatted order summary for ShopeeFood / GrabFood / Zalo
+  const handleCopyOrderSummary = () => {
+    if (totalCount === 0) return;
+
+    const lines = ['📋 TÓM TẮT ĐƠN ĐẶT HÀNG NHÓM'];
+    Object.entries(groupedByRestaurant).forEach(([restName, restItems]) => {
+      lines.push(`\n🏪 Quán: ${restName}`);
+      // Consolidate identical dish + note
+      const countMap = {};
+      restItems.forEach(it => {
+        const key = `${it.dishName}|||${it.note || ''}`;
+        if (!countMap[key]) {
+          countMap[key] = { dishName: it.dishName, note: it.note, count: 0, users: [] };
+        }
+        countMap[key].count += 1;
+        countMap[key].users.push(it.userName);
+      });
+
+      Object.values(countMap).forEach(entry => {
+        const noteStr = entry.note ? ` (${entry.note})` : '';
+        lines.push(`  • ${entry.count}x ${entry.dishName}${noteStr} — [${entry.users.join(', ')}]`);
+      });
+    });
+
+    lines.push(`\n👉 Tổng cộng: ${totalCount} món | Tạm tính: ${formatVND(totalSubtotal)}`);
+
+    navigator.clipboard.writeText(lines.join('\n'));
+    setCopiedOrder(true);
+    setTimeout(() => setCopiedOrder(false), 2500);
+  };
 
   return (
     <section className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-3">
@@ -60,10 +92,32 @@ export default function SharedCart({ items = [], currentUserName, isHost, isLock
         </span>
       </div>
 
-      {/* Grouping Switcher */}
+      {/* Grouping Switcher & 1-Click Copy Order */}
       {totalCount > 0 && (
-        <div className="flex items-center justify-between pt-1">
-          <span className="text-[11px] text-slate-400">Xem giỏ hàng theo:</span>
+        <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+          <button
+            type="button"
+            onClick={handleCopyOrderSummary}
+            className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold border transition flex items-center gap-1.5 active:scale-95 ${
+              copiedOrder
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-slate-50 hover:bg-orange-50 border-slate-200 hover:border-orange-200 text-slate-600 hover:text-orange-600'
+            }`}
+            title="Sao chép danh sách món để gửi qua Zalo hoặc đặt trên ShopeeFood/Grab"
+          >
+            {copiedOrder ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Đã sao chép đơn!</span>
+              </>
+            ) : (
+              <>
+                <ClipboardCopy className="w-3.5 h-3.5" />
+                <span>Copy tóm tắt đơn</span>
+              </>
+            )}
+          </button>
+
           <div className="flex bg-slate-100 p-0.5 rounded-xl text-xs font-semibold">
             <button
               onClick={() => setGroupBy('member')}

@@ -364,6 +364,47 @@ export function registerSocketHandlers(io) {
       io.to(roomId).emit('room_state', room);
     });
 
+    // ===============================================================
+    // PHASE 5: REAL-TIME INTERACTIVE FEATURES (REACTIONS & LUCKY WHEEL)
+    // ===============================================================
+
+    /**
+     * Broadcast floating emoji reaction to all members in the room
+     * Event: send_reaction
+     */
+    socket.on('send_reaction', ({ roomId, emoji, userName }) => {
+      if (!roomId || !emoji) return;
+      io.to(roomId).emit('reaction_received', {
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        emoji,
+        userName: (userName || '').trim() || 'Thành viên'
+      });
+    });
+
+    /**
+     * Server-synchronized Lucky Wheel spin ("Ai đi lấy đồ / Ai trả ship?")
+     * Event: spin_wheel
+     */
+    socket.on('spin_wheel', ({ roomId, topic, candidates, spunBy }) => {
+      if (!roomId || !Array.isArray(candidates) || candidates.length === 0) return;
+
+      const winnerIndex = Math.floor(Math.random() * candidates.length);
+      const winner = candidates[winnerIndex];
+      const extraSpins = 5 + Math.floor(Math.random() * 4); // 5 to 8 full turns
+
+      console.log(`[Lucky Wheel] Room ${roomId} spun by ${spunBy} -> Winner: ${winner} (${topic})`);
+
+      io.to(roomId).emit('wheel_spun', {
+        topic: topic || 'Ai xuống cổng lấy đồ ăn?',
+        candidates,
+        winnerIndex,
+        winner,
+        extraSpins,
+        spunBy: spunBy || 'Chủ phòng',
+        timestamp: Date.now()
+      });
+    });
+
     socket.on('disconnect', () => {
       console.log(`[Socket Disconnected] Socket ID: ${socket.id}`);
     });

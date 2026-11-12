@@ -30,12 +30,20 @@
   100% { background-position: 200% 0; }
 }
 
+@keyframes floatUpReaction {
+  0%   { opacity: 0; transform: translateY(20px) scale(0.6); }
+  15%  { opacity: 1; transform: translateY(0px) scale(1.1); }
+  80%  { opacity: 1; transform: translateY(-220px) scale(1); }
+  100% { opacity: 0; transform: translateY(-300px) scale(0.8); }
+}
+
 /* ─── Animation Utility Classes ─── */
 .animate-fade-in-down { animation: fadeInDown 0.3s ease-out both; }
 .animate-slide-up     { animation: slideUp 0.4s ease-out both; }
 .animate-scale-in     { animation: scaleIn 0.22s ease-out both; }
 .animate-scale-up     { animation: scaleIn 0.22s ease-out both; }
 .animate-pulse-orange { animation: pulse-orange 2s ease-in-out infinite; }
+.animate-float-up     { animation: floatUpReaction 2.4s ease-out forwards; }
 
 /* ─── Base ─── */
 body {

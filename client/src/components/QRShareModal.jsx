@@ -1,10 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Share2, X, Check, Copy, Sparkles } from 'lucide-react';
+import { X, Check, Copy, Sparkles, Wifi } from 'lucide-react';
+import { SERVER_URL } from '../services/socket';
 
 export default function QRShareModal({ roomId, onClose, triggerToast }) {
   const [copied, setCopied] = useState(false);
-  const joinUrl = `${window.location.origin}?room=${roomId}`;
+  const [lanIp, setLanIp] = useState('');
+
+  useEffect(() => {
+    fetch(`${SERVER_URL}/api/network-info`)
+      .then(res => res.json())
+      .then(data => {
+        if (data?.lanIp && data.lanIp !== 'localhost') {
+          setLanIp(data.lanIp);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Automatically replace localhost with actual Wi-Fi LAN IP so phones can scan & join directly!
+  const isLocalhost =
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const portPart = window.location.port ? `:${window.location.port}` : '';
+  const effectiveOrigin =
+    isLocalhost && lanIp
+      ? `${window.location.protocol}//${lanIp}${portPart}`
+      : window.location.origin;
+
+  const joinUrl = `${effectiveOrigin}?room=${roomId}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(joinUrl);
@@ -45,8 +68,15 @@ export default function QRShareModal({ roomId, onClose, triggerToast }) {
           <p className="text-2xl font-black text-orange-600 tracking-widest font-mono mt-0.5">
             {roomId}
           </p>
-          <p className="text-[11px] text-slate-400 mt-1">
-            Quét mã QR bằng Camera điện thoại hoặc Zalo để tham gia ngay!
+
+          {/* LAN IP indicator */}
+          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700">
+            <Wifi className="w-3 h-3 text-emerald-600" />
+            <span className="font-mono truncate max-w-[200px]">{effectiveOrigin}</span>
+          </div>
+
+          <p className="text-[11px] text-slate-400 mt-1.5">
+            Quét mã QR bằng Camera điện thoại hoặc Zalo (cùng Wi-Fi) để vào phòng ngay!
           </p>
         </div>
 
