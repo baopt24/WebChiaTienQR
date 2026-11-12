@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 > nul
 title KHOI DONG HE THONG GOM DON VKU
 echo ========================================================
 echo   HE THONG DAT HANG NHOM & CHIA TIEN VIETQR REALTIME
@@ -7,13 +8,17 @@ echo   Sinh vien: Pham Thai Bao - 24IT023
 echo ========================================================
 echo.
 
-echo [1/2] Dang khoi dong Backend Server (Node.js + Socket.io) tren port 4000...
-start "GomDon-Server" cmd /k "cd /d %~dp0server && npm run dev"
+echo [1/2] Dang khoi dong Backend Server tren port 4000...
+pushd "%~dp0server"
+start "GomDon-Server" cmd /k "npm run dev"
+popd
 
 timeout /t 2 /nobreak > nul
 
-echo [2/2] Dang khoi dong Frontend Client (React Vite) tren port 3000...
-start "GomDon-Client" cmd /k "cd /d %~dp0client && npm run dev"
+echo [2/2] Dang khoi dong Frontend Client tren port 3000...
+pushd "%~dp0client"
+start "GomDon-Client" cmd /k "npm run dev"
+popd
 
 timeout /t 3 /nobreak > nul
 
@@ -23,5 +28,5 @@ start http://localhost:3000
 
 echo.
 echo HE THONG DA SAN SANG!
-echo Ban co the mo 2 tab hoac ket noi dien thoai de test Real-time!
+echo Giu nguyen 2 cua so den dang chay de he thong hoat dong nhe!
 pause
