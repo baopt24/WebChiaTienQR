@@ -11,12 +11,12 @@ echo.
 cd /d "%~dp0"
 
 echo [1/2] Khoi dong Backend Server port 4000...
-start "GomDon-Server" cmd /k "cd /d "%~dp0server" && npm run dev"
+start "GomDon-Server" cmd /k "cd /d "%~dp0server" && npm.cmd run dev"
 
 timeout /t 3 > nul
 
 echo [2/2] Khoi dong Frontend Client port 3000...
-start "GomDon-Client" cmd /k "cd /d "%~dp0client" && npm run dev"
+start "GomDon-Client" cmd /k "cd /d "%~dp0client" && npm.cmd run dev"
 
 timeout /t 4 > nul
 
