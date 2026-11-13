@@ -1,1 +1,9 @@
-[]
+{
+  "security": "AES-256-GCM",
+  "algorithm": "aes-256-gcm",
+  "version": "1.0",
+  "encryptedAt": "2026-11-13T01:40:30.300Z",
+  "iv": "f990f20b3c36aabc5be519bebbd8bc0a",
+  "authTag": "a355916146b1b3f3b6d27450fd2d2846",
+  "cipherText": "27d2"
+}

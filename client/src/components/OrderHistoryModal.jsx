@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, Receipt, RefreshCw, ShoppingBag, CheckCircle2, Laptop, Calendar, Store } from 'lucide-react';
+import { X, Clock, Receipt, RefreshCw, ShoppingBag, CheckCircle2, Laptop, Calendar, Store, ShieldCheck, Lock } from 'lucide-react';
 import { SERVER_URL } from '../services/socket';
 import { formatVND } from '../utils/formatters';
 
 export default function OrderHistoryModal({ onClose }) {
   const [historyData, setHistoryData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showAllFilter, setShowAllFilter] = useState(false);
 
-  const fetchHistory = (all = false) => {
+  const fetchHistory = () => {
     setLoading(true);
-    const url = all ? `${SERVER_URL}/api/history?all=true` : `${SERVER_URL}/api/history`;
-    fetch(url)
+    fetch(`${SERVER_URL}/api/history`)
       .then(res => res.json())
       .then(data => {
         setHistoryData(data);
@@ -24,13 +22,14 @@ export default function OrderHistoryModal({ onClose }) {
   };
 
   useEffect(() => {
-    fetchHistory(showAllFilter);
-  }, [showAllFilter]);
+    fetchHistory();
+  }, []);
 
   const orders = historyData?.orders || [];
   const clientIp = historyData?.clientIp || '127.0.0.1';
   const totalSpent = historyData?.totalSpent || 0;
   const totalOrders = historyData?.totalOrders || 0;
+  const encryptedStorage = historyData?.encryptedStorage || 'AES-256-GCM';
 
   return (
     <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in-down">
@@ -46,7 +45,7 @@ export default function OrderHistoryModal({ onClose }) {
                 Lịch Sử Mua Hàng
               </h3>
               <p className="text-[11px] text-slate-400">
-                Lưu trữ tự động khi cả phòng hoàn tất chuyển tiền
+                Lưu tự động khi người cuối cùng chuyển tiền xong
               </p>
             </div>
           </div>
@@ -58,44 +57,37 @@ export default function OrderHistoryModal({ onClose }) {
           </button>
         </div>
 
-        {/* IP Badge & Mode Switcher */}
-        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex items-center justify-between gap-2 flex-wrap shrink-0">
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <Laptop className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-            <span className="text-[11px]">IP máy của bạn:</span>
-            <span className="font-mono font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200">
-              {clientIp}
-            </span>
+        {/* Security & Privacy Banner */}
+        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 space-y-2 shrink-0">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 text-xs text-slate-700">
+              <Laptop className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+              <span className="text-[11px] font-semibold">IP thiết bị này:</span>
+              <span className="font-mono font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200 text-[11px]">
+                {clientIp}
+              </span>
+            </div>
+
+            <button
+              onClick={fetchHistory}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-bold transition shadow-2xs"
+              title="Làm mới lịch sử"
+            >
+              <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin text-orange-500' : ''}`} />
+              <span>Làm mới</span>
+            </button>
           </div>
 
-          <div className="flex items-center gap-1 text-xs">
-            <button
-              onClick={() => setShowAllFilter(false)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
-                !showAllFilter
-                  ? 'bg-orange-500 text-white shadow-2xs'
-                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-              }`}
-            >
-              Máy này
-            </button>
-            <button
-              onClick={() => setShowAllFilter(true)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
-                showAllFilter
-                  ? 'bg-orange-500 text-white shadow-2xs'
-                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-              }`}
-            >
-              Tất cả phòng
-            </button>
-            <button
-              onClick={() => fetchHistory(showAllFilter)}
-              className="p-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-500 transition ml-1"
-              title="Làm mới"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+          {/* Privacy & Encryption Guarantee Notice */}
+          <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-slate-200/60 text-[10px] text-slate-500">
+            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-100">
+              <Lock className="w-3 h-3 text-emerald-600 shrink-0" />
+              <span className="truncate">Chỉ người trong phòng xem được</span>
+            </div>
+            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-100">
+              <ShieldCheck className="w-3 h-3 text-indigo-600 shrink-0" />
+              <span className="truncate">Mã hóa {encryptedStorage} CSDL</span>
+            </div>
           </div>
         </div>
 
@@ -103,7 +95,7 @@ export default function OrderHistoryModal({ onClose }) {
         <div className="grid grid-cols-2 gap-2.5 shrink-0">
           <div className="p-3 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-100">
             <span className="text-[10px] font-bold text-orange-700 uppercase tracking-wider block">
-              Đơn hàng thành công
+              Đơn bạn đã tham gia
             </span>
             <span className="text-lg font-black text-slate-900 mt-0.5 block">
               {totalOrders} đơn
@@ -111,7 +103,7 @@ export default function OrderHistoryModal({ onClose }) {
           </div>
           <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100">
             <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">
-              Tổng tiền đã thanh toán
+              Tổng tiền bạn đã chi
             </span>
             <span className="text-lg font-black text-emerald-700 mt-0.5 block">
               {formatVND(totalSpent)}
@@ -124,7 +116,7 @@ export default function OrderHistoryModal({ onClose }) {
           {loading ? (
             <div className="text-center py-12 text-slate-400 text-xs">
               <RefreshCw className="w-5 h-5 mx-auto animate-spin mb-2 text-orange-500" />
-              <span>Đang tải lịch sử mua theo IP...</span>
+              <span>Đang giải mã và tải lịch sử đơn hàng...</span>
             </div>
           ) : orders.length === 0 ? (
             <div className="text-center py-12 text-slate-400 space-y-2">
@@ -132,10 +124,10 @@ export default function OrderHistoryModal({ onClose }) {
                 <ShoppingBag className="w-6 h-6 stroke-1" />
               </div>
               <p className="text-xs font-semibold text-slate-600">
-                Chưa có đơn hàng nào hoàn tất từ IP này
+                Chưa có đơn hàng nào từ thiết bị này
               </p>
               <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                Khi phòng gom đơn được Chủ phòng xác nhận đủ tiền cho người cuối cùng, đơn hàng sẽ tự động lưu vĩnh viễn vào đây!
+                Chỉ những thành viên trực tiếp tham gia phòng (ví dụ: máy của bạn và đồng nghiệp trong phòng) mới xem được lịch sử tại máy mình sau khi thanh toán xong!
               </p>
             </div>
           ) : (
@@ -170,7 +162,7 @@ export default function OrderHistoryModal({ onClose }) {
                         <Calendar className="w-3 h-3" />
                         <span>{dateStr}</span>
                         <span>•</span>
-                        <span>IP: {ord.clientIp}</span>
+                        <span className="font-mono text-[9px] text-slate-400">IP: {ord.clientIp}</span>
                       </div>
                     </div>
 
