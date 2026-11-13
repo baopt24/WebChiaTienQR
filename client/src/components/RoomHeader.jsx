@@ -1,7 +1,7 @@
 import React from 'react';
-import { QrCode, Users, LogOut, CheckCircle, Clock, Utensils, Sparkles } from 'lucide-react';
+import { QrCode, Users, LogOut, CheckCircle, Clock, Utensils, Sparkles, Receipt } from 'lucide-react';
 
-export default function RoomHeader({ room, userName, onOpenQR, onOpenWheel, onLeaveRoom }) {
+export default function RoomHeader({ room, userName, onOpenQR, onOpenWheel, onOpenHistory, onLeaveRoom }) {
   if (!room) return null;
 
   return (
@@ -72,6 +72,18 @@ export default function RoomHeader({ room, userName, onOpenQR, onOpenWheel, onLe
             >
               <span>🎡</span>
               <span className="hidden sm:inline">Vòng quay</span>
+            </button>
+          )}
+
+          {/* Order History Button */}
+          {onOpenHistory && (
+            <button
+              onClick={onOpenHistory}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all flex items-center gap-1 shadow-2xs border border-slate-200/70"
+              title="Lịch sử mua hàng theo IP máy"
+            >
+              <Receipt className="w-3.5 h-3.5 text-orange-500" />
+              <span className="hidden sm:inline">Lịch sử</span>
             </button>
           )}
 

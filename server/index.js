@@ -5,6 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import os from 'os';
 import { registerSocketHandlers } from './src/socket.js';
+import { cleanIp, getHistoryForIp, loadAllHistory } from './src/data/orderHistory.js';
 import { 
   PRESET_RESTAURANTS, 
   POPULAR_BANKS,
@@ -87,6 +88,37 @@ app.get('/api/presets', (req, res) => {
 
 app.get('/api/banks', (req, res) => {
   res.json(POPULAR_BANKS);
+});
+
+// ------------------------------------------------------------------
+// Order History based on Client IP Address (Auto-saved when last member pays)
+// ------------------------------------------------------------------
+app.get('/api/history', (req, res) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  const rawIp = req.query.ip || (forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress || req.ip);
+  const clientIp = cleanIp(rawIp);
+
+  // If query ?all=true, return all (useful for host or debug)
+  if (req.query.all === 'true') {
+    const all = loadAllHistory();
+    return res.json({
+      success: true,
+      clientIp,
+      isAll: true,
+      totalOrders: all.length,
+      totalSpent: all.reduce((sum, o) => sum + (o.finalAmount || 0), 0),
+      orders: all
+    });
+  }
+
+  const userOrders = getHistoryForIp(clientIp);
+  res.json({
+    success: true,
+    clientIp,
+    totalOrders: userOrders.length,
+    totalSpent: userOrders.reduce((sum, o) => sum + (o.finalAmount || 0), 0),
+    orders: userOrders
+  });
 });
 
 // ------------------------------------------------------------------

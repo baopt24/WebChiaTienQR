@@ -14,8 +14,9 @@ import QRShareModal from './components/QRShareModal';
 import AdminPortal from './components/AdminPortal';
 import LuckyWheelModal from './components/LuckyWheelModal';
 import FloatingReactions from './components/FloatingReactions';
+import OrderHistoryModal from './components/OrderHistoryModal';
 
-import { Lock, Unlock, CheckCircle2, ShieldCheck, ExternalLink } from 'lucide-react';
+import { Lock, Unlock, CheckCircle2, ShieldCheck, ExternalLink, Receipt } from 'lucide-react';
 
 export default function App() {
   // Check if URL has ?view=admin or ?admin=true
@@ -33,6 +34,7 @@ export default function App() {
   const [showQRModal, setShowQRModal] = useState(false);
   const [showLockModal, setShowLockModal] = useState(false);
   const [showWheelModal, setShowWheelModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [wheelSpinData, setWheelSpinData] = useState(null);
 
   const triggerToast = (msg) => {
@@ -95,6 +97,11 @@ export default function App() {
       setShowWheelModal(true);
     });
 
+    socket.on('all_payments_completed', ({ message }) => {
+      playTingTingSound();
+      triggerToast(`🎉 ${message}`);
+    });
+
     return () => {
       socket.off('room_state');
       socket.off('global_catalog_updated');
@@ -105,6 +112,7 @@ export default function App() {
       socket.off('payment_confirmed');
       socket.off('payment_rejected');
       socket.off('wheel_spun');
+      socket.off('all_payments_completed');
     };
   }, [userName]);
 
@@ -199,17 +207,29 @@ export default function App() {
           triggerToast={triggerToast}
         />
 
-        {/* Link to Dedicated Admin Portal */}
-        <div className="text-center pb-8">
+        {/* Quick Links: Admin Portal & Order History */}
+        <div className="flex items-center justify-center gap-2 pb-8 flex-wrap px-4">
+          <button
+            onClick={() => setShowHistoryModal(true)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-orange-600 transition bg-white/80 border border-slate-200 px-3.5 py-1.5 rounded-full shadow-2xs"
+          >
+            <Receipt className="w-3.5 h-3.5 text-orange-500" />
+            <span>Lịch sử mua hàng (theo IP)</span>
+          </button>
+
           <button
             onClick={() => setIsAdminView(true)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-orange-600 transition bg-white/70 border border-slate-200 px-3.5 py-1.5 rounded-full shadow-sm"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-orange-600 transition bg-white/70 border border-slate-200 px-3.5 py-1.5 rounded-full shadow-2xs"
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Trang Quản Trị Quán & Thực Đơn (Admin Portal)</span>
+            <span>Admin Portal</span>
             <ExternalLink className="w-3 h-3" />
           </button>
         </div>
+
+        {showHistoryModal && (
+          <OrderHistoryModal onClose={() => setShowHistoryModal(false)} />
+        )}
       </>
     );
   }
@@ -233,6 +253,7 @@ export default function App() {
         userName={userName}
         onOpenQR={() => setShowQRModal(true)}
         onOpenWheel={() => setShowWheelModal(true)}
+        onOpenHistory={() => setShowHistoryModal(true)}
         onLeaveRoom={handleLeaveRoom}
       />
 
@@ -356,6 +377,12 @@ export default function App() {
           externalSpinData={wheelSpinData}
           onClose={() => setShowWheelModal(false)}
           triggerToast={triggerToast}
+        />
+      )}
+
+      {showHistoryModal && (
+        <OrderHistoryModal
+          onClose={() => setShowHistoryModal(false)}
         />
       )}
     </div>

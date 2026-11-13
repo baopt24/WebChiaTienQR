@@ -1,8 +1,16 @@
 import { calculateFairSplitBill } from './billSplit.js';
 import { PRESET_RESTAURANTS } from './data/presets.js';
+import { cleanIp, saveCompletedRoomHistory } from './data/orderHistory.js';
 
 // In-Memory Room Store
 export const rooms = new Map();
+
+// Helper: Extract and normalize client IP from socket handshake
+export function getSocketIp(socket) {
+  const forwarded = socket.handshake.headers['x-forwarded-for'];
+  const raw = forwarded ? forwarded.split(',')[0].trim() : socket.handshake.address;
+  return cleanIp(raw);
+}
 
 // Generate readable 4-digit or custom Room ID e.g. "ROOM-8888"
 export function generateUniqueRoomId() {
@@ -33,16 +41,18 @@ export function registerSocketHandlers(io) {
       try {
         const cleanHost = (hostName || '').trim() || 'Chủ phòng';
         const roomId = generateUniqueRoomId();
+        const clientIp = getSocketIp(socket);
 
         const newRoom = {
           id: roomId,
           title: (roomTitle || '').trim() || `Phiên gom đơn của ${cleanHost}`,
           hostName: cleanHost,
           hostSocketId: socket.id,
+          hostIp: clientIp,
           // Inside the room, all restaurants are available for selection!
           restaurants: getClonedPresets(),
           members: [
-            { id: socket.id, name: cleanHost, isHost: true, joinedAt: new Date() }
+            { id: socket.id, name: cleanHost, isHost: true, joinedAt: new Date(), clientIp }
           ],
           items: [],
           isLocked: false,
@@ -56,13 +66,14 @@ export function registerSocketHandlers(io) {
             discountAmount: 0
           },
           billSummary: null,
+          historySaved: false,
           createdAt: new Date()
         };
 
         rooms.set(roomId, newRoom);
         socket.join(roomId);
 
-        console.log(`[Room Created] ${roomId} by Host: ${cleanHost}`);
+        console.log(`[Room Created] ${roomId} by Host: ${cleanHost} (IP: ${clientIp})`);
 
         if (typeof callback === 'function') {
           callback({ success: true, room: newRoom });
@@ -83,6 +94,7 @@ export function registerSocketHandlers(io) {
       try {
         const normalizedId = (roomId || '').trim().toUpperCase();
         const cleanName = (userName || '').trim();
+        const clientIp = getSocketIp(socket);
 
         if (!cleanName) {
           if (typeof callback === 'function') callback({ success: false, message: 'Vui lòng nhập tên của bạn!' });
@@ -106,13 +118,15 @@ export function registerSocketHandlers(io) {
             id: socket.id,
             name: cleanName,
             isHost: false,
-            joinedAt: new Date()
+            joinedAt: new Date(),
+            clientIp
           });
         } else {
           existingMember.id = socket.id; // Refresh connection
+          existingMember.clientIp = clientIp;
         }
 
-        console.log(`[Member Joined] ${cleanName} joined ${room.id} (Total: ${room.members.length})`);
+        console.log(`[Member Joined] ${cleanName} joined ${room.id} (IP: ${clientIp}, Total: ${room.members.length})`);
 
         io.to(room.id).emit('room_state', room);
         io.to(room.id).emit('member_joined', { userName: cleanName, members: room.members });
@@ -144,6 +158,7 @@ export function registerSocketHandlers(io) {
         restaurantName: item.restaurantName || 'Quán tự chọn',
         userName: item.userName || 'Thành viên',
         userSocketId: socket.id,
+        clientIp: getSocketIp(socket),
         createdAt: new Date()
       };
 
@@ -335,6 +350,26 @@ export function registerSocketHandlers(io) {
         memberName: targetMemberBill.userName, 
         amount: targetMemberBill.finalAmount 
       });
+
+      // Check if ALL members have now completed payment (the last member just paid!)
+      const memberBills = room.billSummary.memberBills || [];
+      const allMembersPaid = memberBills.length > 0 && memberBills.every(m => m.paymentStatus === 'PAID');
+
+      if (allMembersPaid && !room.historySaved) {
+        room.historySaved = true;
+        const savedRecords = saveCompletedRoomHistory(room);
+        console.log(`[🎉 ALL PAYMENTS COMPLETED] Room ${roomId} fully collected! Saved ${savedRecords.length} records by Client IP.`);
+
+        io.to(roomId).emit('all_payments_completed', {
+          roomId: room.id,
+          roomTitle: room.title,
+          grandTotal: room.billSummary.grandTotal,
+          savedCount: savedRecords.length,
+          completedAt: new Date(),
+          message: 'Tất cả thành viên đã hoàn tất chuyển tiền! Đơn hàng đã được tự động lưu trữ vào Lịch sử mua hàng theo IP thiết bị.'
+        });
+      }
+
       io.to(roomId).emit('room_state', room);
     });
 
