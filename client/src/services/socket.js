@@ -1,9 +1,7 @@
 import { io } from 'socket.io-client';
 
-// Detect server host dynamically (works both on localhost and LAN IP e.g. 192.168.x.x for mobile testing)
-export const SERVER_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:4000' 
-  : `http://${window.location.hostname}:4000`;
+// Dynamically connect to backend Server using the current Network Host/IP
+export const SERVER_URL = `${window.location.protocol}//${window.location.hostname}:4000`;
 
 export const socket = io(SERVER_URL, {
   autoConnect: true,
