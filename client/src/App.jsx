@@ -192,9 +192,9 @@ export default function App() {
     return (
       <>
         {notification && (
-          <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg text-xs z-50 flex items-center gap-2 animate-fade-in-down">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span>{notification}</span>
+          <div className="fixed top-5 right-4 sm:right-6 bg-slate-900 text-white px-4 py-2.5 rounded-2xl shadow-2xl text-xs z-50 flex items-center gap-2 animate-fade-in-down border border-slate-700/50">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="font-medium">{notification}</span>
           </div>
         )}
 
@@ -205,27 +205,9 @@ export default function App() {
             setUserName(name);
           }}
           triggerToast={triggerToast}
+          onOpenHistory={() => setShowHistoryModal(true)}
+          onOpenAdmin={() => setIsAdminView(true)}
         />
-
-        {/* Quick Links: Admin Portal & Order History */}
-        <div className="flex items-center justify-center gap-2 pb-8 flex-wrap px-4">
-          <button
-            onClick={() => setShowHistoryModal(true)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-orange-600 transition bg-white/80 border border-slate-200 px-3.5 py-1.5 rounded-full shadow-2xs"
-          >
-            <Receipt className="w-3.5 h-3.5 text-orange-500" />
-            <span>Lịch sử mua hàng (theo IP)</span>
-          </button>
-
-          <button
-            onClick={() => setIsAdminView(true)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-orange-600 transition bg-white/70 border border-slate-200 px-3.5 py-1.5 rounded-full shadow-2xs"
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Admin Portal</span>
-            <ExternalLink className="w-3 h-3" />
-          </button>
-        </div>
 
         {showHistoryModal && (
           <OrderHistoryModal onClose={() => setShowHistoryModal(false)} />
@@ -239,11 +221,11 @@ export default function App() {
   // -------------------------------------------------------------
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50/40 to-slate-50">
-      {/* Toast Alert */}
+      {/* Toast Alert — Positioned at top-right below header so it never blocks navigation buttons */}
       {notification && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-xl text-xs z-50 flex items-center gap-2 animate-fade-in-down">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>{notification}</span>
+        <div className="fixed top-16 right-4 sm:right-6 bg-slate-900/95 backdrop-blur text-white px-4 py-2.5 rounded-2xl shadow-2xl text-xs z-50 flex items-center gap-2 animate-fade-in-down border border-slate-700/50 max-w-sm">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span className="font-medium">{notification}</span>
         </div>
       )}
 
@@ -258,8 +240,8 @@ export default function App() {
       />
 
       {/* Main Content Area — 2-col on desktop */}
-      <div className="max-w-7xl mx-auto px-4 pb-28 md:pb-10 pt-3 md:pt-5">
-        <div className="md:grid md:grid-cols-[1fr,440px] md:gap-6 lg:grid-cols-[1fr,480px]">
+      <div className="max-w-7xl mx-auto px-4 pb-36 md:pb-28 pt-3 md:pt-5">
+        <div className="md:grid md:grid-cols-[1fr,440px] md:gap-6 lg:grid-cols-[1fr,480px] items-start">
 
           {/* ── LEFT COLUMN: Menu ── */}
           <div className="order-2 md:order-1 animate-slide-up">
@@ -272,8 +254,8 @@ export default function App() {
             />
           </div>
 
-          {/* ── RIGHT COLUMN: Cart + Bill Summary ── */}
-          <div className="order-1 md:order-2 space-y-4 mb-4 md:mb-0 animate-fade-in-down">
+          {/* ── RIGHT COLUMN: Cart + Bill Summary (Sticky & Independent Scroll on Desktop) ── */}
+          <div className="order-1 md:order-2 space-y-4 mb-4 md:mb-0 animate-fade-in-down md:sticky md:top-20 md:self-start md:max-h-[calc(100vh-6.5rem)] md:overflow-y-auto pr-0.5">
             {/* Live Floating Emoji Reactions Bar */}
             <FloatingReactions
               roomId={room.id}

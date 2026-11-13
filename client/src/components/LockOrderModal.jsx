@@ -1,10 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, Truck, Tag, X, Sparkles, Calculator } from 'lucide-react';
 import { formatVND } from '../utils/formatters';
 
 export default function LockOrderModal({ totalSubtotal, onClose, onConfirmLock }) {
   const [shippingFee, setShippingFee] = useState('0');
   const [discountAmount, setDiscountAmount] = useState('0');
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const ship = Math.max(0, parseInt(shippingFee) || 0);
   const discount = Math.max(0, parseInt(discountAmount) || 0);
@@ -19,10 +27,13 @@ export default function LockOrderModal({ totalSubtotal, onClose, onConfirmLock }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in-down">
+    <div 
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 bg-slate-900/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in-down"
+    >
       <form 
         onSubmit={handleSubmit} 
-        className="bg-white rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in shadow-2xl border border-slate-100"
+        className="bg-white rounded-3xl p-6 max-w-sm w-full space-y-4 animate-scale-in shadow-2xl border border-slate-100 relative z-10"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

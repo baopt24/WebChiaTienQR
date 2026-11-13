@@ -16,7 +16,13 @@ export default function QRShareModal({ roomId, onClose, triggerToast }) {
         }
       })
       .catch(() => {});
-  }, []);
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   // Automatically replace localhost with actual Wi-Fi LAN IP so phones can scan & join directly!
   const isLocalhost =
@@ -37,8 +43,11 @@ export default function QRShareModal({ roomId, onClose, triggerToast }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in-down">
-      <div className="bg-white rounded-3xl p-6 max-w-xs w-full text-center space-y-4 animate-scale-in shadow-2xl border border-slate-100">
+    <div 
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 bg-slate-900/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in-down"
+    >
+      <div className="bg-white rounded-3xl p-6 max-w-xs w-full text-center space-y-4 animate-scale-in shadow-2xl border border-slate-100 relative z-10">
         <div className="flex items-center justify-between">
           <h3 className="font-black text-base text-slate-800 flex items-center gap-1.5">
             <Sparkles className="w-4 h-4 text-orange-500" />

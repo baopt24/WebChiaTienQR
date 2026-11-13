@@ -99,20 +99,21 @@ export default function MenuSection({ restaurants = [], cartItems = [], isLocked
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-400"
                     loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+                  {/* High contrast gradient scrim to make text 100% readable on bright food photos */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/15" />
                   
                   <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-end justify-between text-white">
-                    <div className="min-w-0">
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-orange-500 text-white inline-block">
+                    <div className="min-w-0 pr-1">
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-orange-500 text-white inline-block shadow-sm">
                         {rest.category || 'Quán ăn'}
                       </span>
-                      <h4 className="text-xs font-extrabold line-clamp-1 mt-0.5 text-white drop-shadow">
+                      <h4 className="text-xs font-black line-clamp-1 mt-0.5 text-white drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.8)]">
                         {rest.name}
                       </h4>
                     </div>
 
                     {chosenCount > 0 && (
-                      <span className="text-[9px] font-extrabold bg-emerald-500 text-white px-1.5 py-0.5 rounded-full shadow-xs shrink-0 ml-1">
+                      <span className="text-[9px] font-black bg-emerald-500 text-white px-1.5 py-0.5 rounded-full shadow-md shrink-0 ml-1">
                         +{chosenCount}
                       </span>
                     )}
@@ -181,22 +182,22 @@ export default function MenuSection({ restaurants = [], cartItems = [], isLocked
         )}
       </div>
 
-      {/* Restaurant Info Header with Banner */}
-      <div className="relative rounded-2xl overflow-hidden">
+      {/* Restaurant Info Header with High-Contrast Banner */}
+      <div className="relative rounded-2xl overflow-hidden shadow-sm">
         <img
           src={activeRestaurant.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500&q=80'}
           alt={activeRestaurant.name}
-          className="w-full h-24 object-cover"
+          className="w-full h-24 sm:h-28 object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/30 flex items-center p-4 gap-3">
+        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/65 to-black/35 flex items-center p-4 gap-3">
           <div className="flex-1 text-white">
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-500 text-white inline-block">
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-orange-500 text-white inline-block shadow-sm">
               {activeRestaurant.category || 'Quán ăn'}
             </span>
-            <h3 className="text-base font-extrabold line-clamp-1 mt-1">
+            <h3 className="text-base sm:text-lg font-black line-clamp-1 mt-1 drop-shadow-md">
               {activeRestaurant.name}
             </h3>
-            <p className="text-[11px] text-slate-300 line-clamp-1 mt-0.5">
+            <p className="text-[11px] text-slate-200 line-clamp-1 mt-0.5 drop-shadow">
               {activeRestaurant.address || 'Khu vực Làng Đại học'}
             </p>
           </div>

@@ -153,7 +153,7 @@ export default function BillSummarySection({
 
       {/* 3. CURRENT USER'S PERSONALIZED BILL & VIETQR CARD */}
       {myBill ? (
-        <div className={`bg-white rounded-3xl p-5 sm:p-6 border-2 shadow-xl space-y-4 transition-all duration-300 ${
+        <div className={`bg-white rounded-3xl p-4 sm:p-5 border-2 shadow-xl space-y-3.5 transition-all duration-300 ${
           myBill.paymentStatus === 'PAID'
             ? 'border-emerald-500 shadow-emerald-500/10 bg-emerald-50/20'
             : myBill.paymentStatus === 'PENDING'
@@ -249,11 +249,11 @@ export default function BillSummarySection({
                 </p>
               </div>
               
-              <div className="inline-block p-3.5 bg-white rounded-3xl shadow-lg border-2 border-orange-100 hover:border-orange-300 transition">
+              <div className="inline-block p-2.5 sm:p-3 bg-white rounded-2xl sm:rounded-3xl shadow-md border-2 border-orange-100 hover:border-orange-300 transition">
                 <img
                   src={myBill.vietQRUrl}
                   alt={`VietQR for ${currentUserName}`}
-                  className="w-56 h-56 mx-auto rounded-xl object-contain"
+                  className="w-44 h-44 sm:w-48 sm:h-48 mx-auto rounded-xl object-contain"
                 />
               </div>
 
