@@ -15,6 +15,9 @@ import AdminPortal from './components/AdminPortal';
 import LuckyWheelModal from './components/LuckyWheelModal';
 import FloatingReactions from './components/FloatingReactions';
 import OrderHistoryModal from './components/OrderHistoryModal';
+import CountdownBanner from './components/CountdownBanner';
+import InRoomChat from './components/InRoomChat';
+import BillReceiptModal from './components/BillReceiptModal';
 
 import { Lock, Unlock, CheckCircle2, ShieldCheck, ExternalLink, Receipt } from 'lucide-react';
 
@@ -35,6 +38,7 @@ export default function App() {
   const [showLockModal, setShowLockModal] = useState(false);
   const [showWheelModal, setShowWheelModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [wheelSpinData, setWheelSpinData] = useState(null);
 
   const triggerToast = (msg) => {
@@ -102,6 +106,18 @@ export default function App() {
       triggerToast(`🎉 ${message}`);
     });
 
+    socket.on('countdown_updated', ({ countdownEnd, durationMinutes }) => {
+      setRoom(prev => {
+        if (!prev) return null;
+        return { ...prev, countdownEnd };
+      });
+      if (countdownEnd && durationMinutes) {
+        triggerToast(`⏳ Host vừa hẹn giờ chốt đơn: ${durationMinutes} phút!`);
+      } else if (!countdownEnd) {
+        triggerToast('Host đã hủy hẹn giờ chốt đơn.');
+      }
+    });
+
     return () => {
       socket.off('room_state');
       socket.off('global_catalog_updated');
@@ -113,6 +129,7 @@ export default function App() {
       socket.off('payment_rejected');
       socket.off('wheel_spun');
       socket.off('all_payments_completed');
+      socket.off('countdown_updated');
     };
   }, [userName]);
 
@@ -241,6 +258,19 @@ export default function App() {
 
       {/* Main Content Area — 2-col on desktop */}
       <div className="max-w-7xl mx-auto px-4 pb-36 md:pb-28 pt-3 md:pt-5">
+        {/* Real-time Order Countdown Timer Banner */}
+        <CountdownBanner
+          room={room}
+          isHost={isHost}
+          onTimerEnded={() => {
+            if (isHost) {
+              triggerToast('⏳ Đã hết giờ chọn món! Hãy bấm "Chốt đơn & Chia tiền".');
+            } else {
+              triggerToast('⏳ Đã hết thời gian chọn món!');
+            }
+          }}
+        />
+
         <div className="md:grid md:grid-cols-[1fr,440px] md:gap-6 lg:grid-cols-[1fr,480px] items-start">
 
           {/* ── LEFT COLUMN: Menu ── */}
@@ -273,6 +303,7 @@ export default function App() {
                 isHost={isHost}
                 onUnlockRoom={handleUnlockRoom}
                 triggerToast={triggerToast}
+                onOpenReceipt={() => setShowReceiptModal(true)}
               />
             )}
 
@@ -367,6 +398,23 @@ export default function App() {
           onClose={() => setShowHistoryModal(false)}
         />
       )}
+
+      {showReceiptModal && room?.billSummary && (
+        <BillReceiptModal
+          room={room}
+          billSummary={room.billSummary}
+          onClose={() => setShowReceiptModal(false)}
+          triggerToast={triggerToast}
+        />
+      )}
+
+      {/* Real-time In-Room Floating Chat Box with Quick Chips */}
+      <InRoomChat
+        roomId={room.id}
+        currentUserName={userName}
+        isHost={isHost}
+        initialMessages={room.messages || []}
+      />
     </div>
   );
 }

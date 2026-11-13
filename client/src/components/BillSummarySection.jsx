@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Copy, Check, CreditCard, Lock, Unlock, CheckCircle2, 
-  Clock, AlertTriangle, ChevronDown, ChevronUp, Sparkles, Send, RefreshCw, XCircle
+  Clock, AlertTriangle, ChevronDown, ChevronUp, Sparkles, Send, RefreshCw, XCircle, Receipt
 } from 'lucide-react';
 import { socket } from '../services/socket';
 import { formatVND } from '../utils/formatters';
@@ -39,7 +39,8 @@ export default function BillSummarySection({
   roomId,
   isHost,
   onUnlockRoom,
-  triggerToast
+  triggerToast,
+  onOpenReceipt
 }) {
   const [copiedMemo, setCopiedMemo] = useState(false);
   const [showAllDetails, setShowAllDetails] = useState(true);
@@ -127,14 +128,26 @@ export default function BillSummarySection({
 
       {/* 2. Collection Progress Bar */}
       <div className="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 space-y-3">
-        <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center justify-between text-xs flex-wrap gap-2">
           <span className="font-bold text-slate-700 flex items-center gap-1.5">
             <span>Tiến độ thanh toán cả phòng</span>
             {percentCollected === 100 && <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-bounce" />}
           </span>
-          <span className="font-black text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-100">
-            {paidMembers}/{totalMembers} người ({percentCollected}%)
-          </span>
+          <div className="flex items-center gap-2">
+            {onOpenReceipt && (
+              <button
+                onClick={onOpenReceipt}
+                className="px-2.5 py-1 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-700 rounded-xl text-[11px] font-bold transition flex items-center gap-1 border border-blue-200 active:scale-95"
+                title="Xem và xuất hóa đơn biên lai gửi nhóm"
+              >
+                <Receipt className="w-3.5 h-3.5 text-blue-600" />
+                <span>Xuất biên lai</span>
+              </button>
+            )}
+            <span className="font-black text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-100">
+              {paidMembers}/{totalMembers} người ({percentCollected}%)
+            </span>
+          </div>
         </div>
 
         {/* Animated Bar */}

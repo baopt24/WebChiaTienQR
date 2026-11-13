@@ -65,6 +65,8 @@ export function registerSocketHandlers(io) {
             shippingFee: 0,
             discountAmount: 0
           },
+          countdownEnd: null,
+          messages: [],
           billSummary: null,
           historySaved: false,
           createdAt: new Date()
@@ -438,6 +440,71 @@ export function registerSocketHandlers(io) {
         spunBy: spunBy || 'Chủ phòng',
         timestamp: Date.now()
       });
+    });
+
+    // ===============================================================
+    // PHASE 6: SYNCHRONIZED ORDER COUNTDOWN & IN-ROOM QUICK CHAT
+    // ===============================================================
+
+    /**
+     * Set synchronized countdown timer for locking orders
+     * Event: set_countdown
+     */
+    socket.on('set_countdown', ({ roomId, durationMinutes }) => {
+      const room = rooms.get(roomId);
+      if (!room) return;
+      const mins = Math.max(1, Math.min(120, parseInt(durationMinutes) || 10));
+      room.countdownEnd = Date.now() + mins * 60 * 1000;
+      console.log(`[Countdown Set] Room ${roomId}: ${mins} mins (ends at ${new Date(room.countdownEnd).toLocaleTimeString()})`);
+      io.to(roomId).emit('countdown_updated', {
+        roomId,
+        countdownEnd: room.countdownEnd,
+        durationMinutes: mins
+      });
+      io.to(roomId).emit('room_state', room);
+    });
+
+    /**
+     * Clear countdown timer
+     * Event: clear_countdown
+     */
+    socket.on('clear_countdown', ({ roomId }) => {
+      const room = rooms.get(roomId);
+      if (!room) return;
+      room.countdownEnd = null;
+      console.log(`[Countdown Cleared] Room ${roomId}`);
+      io.to(roomId).emit('countdown_updated', { roomId, countdownEnd: null });
+      io.to(roomId).emit('room_state', room);
+    });
+
+    /**
+     * Real-time in-room chat messages
+     * Event: send_chat_message
+     */
+    socket.on('send_chat_message', ({ roomId, userName, text }) => {
+      const room = rooms.get(roomId);
+      if (!room) return;
+      const cleanText = (text || '').trim();
+      if (!cleanText) return;
+
+      const senderName = (userName || '').trim() || 'Thành viên';
+      const isHost = senderName.toLowerCase() === (room.hostName || '').toLowerCase();
+
+      const message = {
+        id: `MSG-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        roomId,
+        userName: senderName,
+        text: cleanText.substring(0, 300),
+        isHost,
+        timestamp: new Date().toISOString()
+      };
+
+      if (!room.messages) room.messages = [];
+      room.messages.push(message);
+      if (room.messages.length > 80) room.messages.shift(); // keep last 80 messages
+
+      console.log(`[Chat] [${roomId}] ${senderName}: ${cleanText}`);
+      io.to(roomId).emit('chat_message_received', message);
     });
 
     socket.on('disconnect', () => {
